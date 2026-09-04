@@ -27,7 +27,7 @@ Double-click the App to open the session window. The window provides:
 - one clear remaining-time value per monitored session;
 - inactive Desktop sessions remain visible while their latest cache may still be valid;
 - the latest model, a compact project path, and the latest instruction;
-- responsive session rows and text sizing in a freely resizable window;
+- responsive session rows and text sizing based on both window width and height;
 - a compact bottom status bar with active-session count and controls;
 - a persistent window pin button that keeps the monitor above normal windows;
 - click a session row to activate Claude Code Desktop;

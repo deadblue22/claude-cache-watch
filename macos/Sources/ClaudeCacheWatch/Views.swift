@@ -4,7 +4,7 @@ import SwiftUI
 struct CachePanel: View {
     @ObservedObject var model: CacheWatchModel
     @AppStorage("pinWindowOnTop") private var isPinned = false
-    @State private var windowWidth: CGFloat = 416
+    @State private var windowSize = CGSize(width: 416, height: 103)
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,15 +28,19 @@ struct CachePanel: View {
         )
         .background {
             GeometryReader { geometry in
-                Color.clear.preference(key: WindowWidthPreferenceKey.self, value: geometry.size.width)
+                Color.clear.preference(key: WindowSizePreferenceKey.self, value: geometry.size)
             }
         }
-        .onPreferenceChange(WindowWidthPreferenceKey.self) { windowWidth = $0 }
+        .onPreferenceChange(WindowSizePreferenceKey.self) { windowSize = $0 }
         .task { model.start() }
     }
 
     private var textScale: CGFloat {
-        min(1.2, max(0.88, windowWidth / 416))
+        let widthRatio = max(0.5, windowSize.width / 416)
+        let naturalHeight = max(103, preferredContentHeight + 31)
+        let heightRatio = max(0.5, windowSize.height / naturalHeight)
+        let proportionalScale = sqrt(widthRatio * heightRatio)
+        return min(1.45, max(0.82, proportionalScale))
     }
 
     private var statusBar: some View {
@@ -138,10 +142,10 @@ struct CachePanel: View {
     }
 }
 
-private struct WindowWidthPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 416
+private struct WindowSizePreferenceKey: PreferenceKey {
+    static var defaultValue = CGSize(width: 416, height: 103)
 
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
         value = nextValue()
     }
 }
