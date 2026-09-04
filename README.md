@@ -9,7 +9,7 @@ All displayed timestamps use SGT (Singapore time).
 ## Requirements
 
 - macOS 14 or later
-- Xcode Command Line Tools with Swift 6 support
+- Xcode Command Line Tools with Swift 5.10 or later
 - Python 3.10 or later
 - Claude Code Desktop with local session data under `~/.claude`
 
