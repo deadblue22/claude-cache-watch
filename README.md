@@ -1,5 +1,7 @@
 # Claude Cache Watch
 
+<img src="assets/AppIcon.png" width="128" alt="Claude Cache Watch app icon">
+
 A macOS App and local CLI that estimate the remaining prompt-cache TTL for Claude Code Desktop sessions. Both read only local files under `~/.claude`; they do not send prompts or call the Anthropic API.
 
 Claude's prompt cache is server-side. The local JSONL records include cache read/write token counts, the cache TTL used (`5m` or `1h`), and event timestamps, but not a server-confirmed expiry timestamp. The CLI therefore reports a narrow estimate bounded by the local event immediately before the request and the first assistant event for that request.
