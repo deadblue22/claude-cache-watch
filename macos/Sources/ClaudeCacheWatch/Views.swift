@@ -175,11 +175,11 @@ struct SessionRow: View {
                 }
                 HStack(spacing: 6) {
                     Text(session.displayModel)
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(Color.primary.opacity(0.05), in: Capsule())
+                        .font(.system(size: 9.5, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1.5)
+                        .background(Color.accentColor, in: Capsule())
                         .fixedSize()
                     Text(session.compactProjectPath)
                         .font(.system(size: 10, design: .monospaced))
