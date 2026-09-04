@@ -8,7 +8,7 @@ struct ClaudeCacheWatchApp: App {
         Window("Claude Cache Watch", id: "main") {
             CachePanel(model: model)
         }
-        .windowResizability(.contentSize)
+        .windowResizability(.contentMinSize)
         .defaultPosition(.center)
     }
 }

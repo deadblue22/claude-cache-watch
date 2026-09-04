@@ -7,34 +7,41 @@ struct CachePanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-            Divider()
             content
+            Divider()
+            statusBar
         }
-        .frame(width: 416)
+        .frame(
+            minWidth: 320,
+            idealWidth: 416,
+            maxWidth: .infinity,
+            minHeight: 103,
+            idealHeight: preferredContentHeight + 31,
+            maxHeight: .infinity
+        )
         .background(WindowLevelConfigurator(isPinned: isPinned))
         .task { model.start() }
     }
 
-    private var header: some View {
-        HStack(alignment: .center, spacing: 8) {
+    private var statusBar: some View {
+        HStack(alignment: .center, spacing: 7) {
             Circle()
                 .fill(headerStatusColor)
-                .frame(width: 6, height: 6)
+                .frame(width: 5, height: 5)
             Text(summaryText)
-                .font(.system(size: 11.5, weight: .medium))
+                .font(.system(size: 10.5, weight: .medium))
                 .foregroundStyle(.secondary)
             Spacer()
             Button {
                 isPinned.toggle()
             } label: {
                 Image(systemName: isPinned ? "pin.fill" : "pin")
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(width: 25, height: 25)
+                    .font(.system(size: 11, weight: .semibold))
+                    .frame(width: 22, height: 22)
                     .foregroundStyle(isPinned ? Color.accentColor : Color.primary)
                     .background(
                         isPinned ? Color.accentColor.opacity(0.13) : Color.primary.opacity(0.045),
-                        in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        in: RoundedRectangle(cornerRadius: 5, style: .continuous)
                     )
             }
             .buttonStyle(.plain)
@@ -44,16 +51,16 @@ struct CachePanel: View {
                 model.restartMonitor()
             } label: {
                 Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(width: 25, height: 25)
-                    .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .font(.system(size: 11, weight: .semibold))
+                    .frame(width: 22, height: 22)
+                    .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
             }
             .buttonStyle(.plain)
             .help("Updates every 2 seconds; click to refresh now")
             .accessibilityLabel("Refresh now")
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
     }
 
     private var summaryText: String {
@@ -102,13 +109,12 @@ struct CachePanel: View {
                         }
                     }
                 }
-                .scrollIndicators(model.sessions.count > 5 ? .visible : .hidden)
             }
         }
-        .frame(height: contentHeight)
+        .frame(minHeight: 72, idealHeight: preferredContentHeight, maxHeight: .infinity)
     }
 
-    private var contentHeight: CGFloat {
+    private var preferredContentHeight: CGFloat {
         if model.isConnecting || model.errorMessage != nil || model.sessions.isEmpty { return 118 }
         let rowsHeight = CGFloat(model.sessions.count) * 72
         let dividersHeight = CGFloat(max(0, model.sessions.count - 1))
@@ -160,6 +166,7 @@ struct SessionRow: View {
                     Text(session.displayTitle)
                         .font(.system(size: 13, weight: .semibold))
                         .lineLimit(1)
+                        .layoutPriority(1)
                     Spacer(minLength: 6)
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
                         Text(remainingText)
