@@ -38,7 +38,7 @@ final class MonitorProcess {
         let outputPipe = Pipe()
         let errorPipe = Pipe()
         process.executableURL = pythonURL
-        var arguments = [scriptURL.path, "--json", "--watch", "2"]
+        var arguments = [scriptURL.path, "--json", "--watch", "2", "--keep-valid-cache"]
         if scope == .recent {
             arguments.append(contentsOf: ["--all", "--limit", "30"])
         }

@@ -1,10 +1,18 @@
 import json
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from claude_cache_watch import cache_status, parse_transcript, remaining_text, session_from_transcript
+from claude_cache_watch import (
+    TranscriptCache,
+    cache_status,
+    collect_sessions,
+    parse_transcript,
+    remaining_text,
+    session_from_transcript,
+)
 
 
 def write_jsonl(path: Path, records: list[dict]) -> None:
@@ -147,6 +155,58 @@ class TestClaudeCacheWatch(unittest.TestCase):
 
             now = datetime(2026, 9, 4, 7, 6, tzinfo=timezone.utc)
             self.assertEqual(cache_status(session, now), "EXPIRED")
+
+    def test_keeps_inactive_desktop_session_until_cache_expiry(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            claude_dir = Path(temp_dir)
+            transcript_dir = claude_dir / "projects" / "test-project"
+            transcript_dir.mkdir(parents=True)
+            path = transcript_dir / "cached-session.jsonl"
+            write_jsonl(
+                path,
+                [
+                    {"type": "user", "timestamp": "2026-09-04T07:00:00Z"},
+                    assistant("2026-09-04T07:00:01Z", "request-1", read=100, one_hour=20),
+                ],
+            )
+            file_time = datetime(2026, 9, 4, 7, 30, tzinfo=timezone.utc).timestamp()
+            os.utime(path, (file_time, file_time))
+            cache = TranscriptCache()
+
+            running_only = collect_sessions(
+                claude_dir,
+                include_inactive=False,
+                include_cli=False,
+                keep_valid_cache=False,
+                limit=20,
+                selector=None,
+                now=datetime(2026, 9, 4, 7, 30, tzinfo=timezone.utc),
+                cache=cache,
+            )
+            visible = collect_sessions(
+                claude_dir,
+                include_inactive=False,
+                include_cli=False,
+                keep_valid_cache=True,
+                limit=20,
+                selector=None,
+                now=datetime(2026, 9, 4, 7, 30, tzinfo=timezone.utc),
+                cache=cache,
+            )
+            expired = collect_sessions(
+                claude_dir,
+                include_inactive=False,
+                include_cli=False,
+                keep_valid_cache=True,
+                limit=20,
+                selector=None,
+                now=datetime(2026, 9, 4, 8, 30, tzinfo=timezone.utc),
+                cache=cache,
+            )
+
+            self.assertEqual(running_only, [])
+            self.assertEqual([session.session_id for session in visible], ["cached-session"])
+            self.assertEqual(expired, [])
 
 
 if __name__ == "__main__":

@@ -20,7 +20,12 @@ struct CachePanel: View {
             idealHeight: preferredContentHeight + 31,
             maxHeight: .infinity
         )
-        .background(WindowLevelConfigurator(isPinned: isPinned))
+        .background(
+            WindowConfigurator(
+                isPinned: isPinned,
+                preferredContentHeight: preferredContentHeight + 31
+            )
+        )
         .background {
             GeometryReader { geometry in
                 Color.clear.preference(key: WindowWidthPreferenceKey.self, value: geometry.size.width)
@@ -77,9 +82,9 @@ struct CachePanel: View {
     private var summaryText: String {
         if model.isConnecting { return "Loading sessions…" }
         if model.errorMessage != nil { return "Unable to read sessions" }
-        if model.sessions.isEmpty { return "No active sessions" }
+        if model.sessions.isEmpty { return "No monitored sessions" }
         let count = model.sessions.count
-        return "\(count) active \(count == 1 ? "session" : "sessions")"
+        return "\(count) monitored \(count == 1 ? "session" : "sessions")"
     }
 
     private var headerStatusColor: Color {
@@ -109,7 +114,7 @@ struct CachePanel: View {
                 EmptyState(textScale: textScale)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                ScrollView {
+                ScrollView(.vertical, showsIndicators: false) {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(model.sessions.enumerated()), id: \.element.id) { index, session in
                             SessionRow(session: session, now: model.now, textScale: textScale)
@@ -129,7 +134,7 @@ struct CachePanel: View {
         if model.isConnecting || model.errorMessage != nil || model.sessions.isEmpty { return 118 }
         let rowsHeight = CGFloat(model.sessions.count) * 72
         let dividersHeight = CGFloat(max(0, model.sessions.count - 1))
-        return min(365, max(72, rowsHeight + dividersHeight))
+        return min(510, max(72, rowsHeight + dividersHeight))
     }
 }
 
@@ -141,22 +146,55 @@ private struct WindowWidthPreferenceKey: PreferenceKey {
     }
 }
 
-private struct WindowLevelConfigurator: NSViewRepresentable {
+private struct WindowConfigurator: NSViewRepresentable {
     let isPinned: Bool
+    let preferredContentHeight: CGFloat
+
+    final class Coordinator {
+        var lastPreferredContentHeight: CGFloat?
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView(frame: .zero)
-        apply(to: view)
+        apply(to: view, coordinator: context.coordinator)
         return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        apply(to: nsView)
+        apply(to: nsView, coordinator: context.coordinator)
     }
 
-    private func apply(to view: NSView) {
+    private func apply(to view: NSView, coordinator: Coordinator) {
         DispatchQueue.main.async {
-            view.window?.level = isPinned ? .floating : .normal
+            guard let window = view.window else { return }
+            window.level = isPinned ? .floating : .normal
+
+            if let lastHeight = coordinator.lastPreferredContentHeight,
+               abs(lastHeight - preferredContentHeight) < 0.5 {
+                return
+            }
+
+            let currentFrame = window.frame
+            let currentContentHeight = window.contentLayoutRect.height
+            if abs(currentContentHeight - preferredContentHeight) >= 0.5 {
+                let titleBarHeight = max(0, currentFrame.height - currentContentHeight)
+                let targetFrameHeight = preferredContentHeight + titleBarHeight
+                let currentTop = currentFrame.maxY
+                let minimumY = window.screen?.visibleFrame.minY ?? currentFrame.minY
+                var targetFrame = currentFrame
+                targetFrame.size.height = targetFrameHeight
+                targetFrame.origin.y = max(minimumY, currentTop - targetFrameHeight)
+                window.setFrame(
+                    targetFrame,
+                    display: true,
+                    animate: coordinator.lastPreferredContentHeight != nil
+                )
+            }
+            coordinator.lastPreferredContentHeight = preferredContentHeight
         }
     }
 }
@@ -262,9 +300,9 @@ struct EmptyState: View {
             Image(systemName: "rectangle.stack")
                 .font(.system(size: 21, weight: .light))
                 .foregroundStyle(.secondary)
-            Text("No active Desktop sessions")
+            Text("No active or cached Desktop sessions")
                 .font(.system(size: 12 * textScale, weight: .medium))
-            Text("Start or continue a session in Claude Code Desktop and it will appear here.")
+            Text("Start a session in Claude Code Desktop and it will appear here while active or cached.")
                 .font(.system(size: 10.5 * textScale))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

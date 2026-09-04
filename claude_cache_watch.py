@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 
 SGT = ZoneInfo("Asia/Singapore")
 TTL_SECONDS = {"5m": 5 * 60, "1h": 60 * 60}
+CACHE_SCAN_MARGIN_SECONDS = 5 * 60
 
 
 class CliError(RuntimeError):
@@ -333,8 +334,10 @@ def collect_sessions(
     *,
     include_inactive: bool,
     include_cli: bool,
+    keep_valid_cache: bool,
     limit: int,
     selector: str | None,
+    now: datetime,
     cache: TranscriptCache,
 ) -> list[SessionInfo]:
     registrations = load_registrations(claude_dir)
@@ -352,7 +355,7 @@ def collect_sessions(
         return [session_from_transcript(info, registrations.get(info.session_id))]
 
     if not include_inactive:
-        sessions: list[SessionInfo] = []
+        sessions_by_id: dict[str, SessionInfo] = {}
         for session_id, registration in registrations.items():
             if not registration.get("_running"):
                 continue
@@ -360,23 +363,40 @@ def collect_sessions(
                 continue
             path = path_by_id.get(session_id)
             if path:
-                sessions.append(session_from_transcript(cache.parse(path), registration))
+                sessions_by_id[session_id] = session_from_transcript(cache.parse(path), registration)
             else:
-                sessions.append(
-                    SessionInfo(
-                        session_id=session_id,
-                        title=None,
-                        cwd=registration.get("cwd"),
-                        entrypoint=registration.get("entrypoint"),
-                        version=registration.get("version"),
-                        model=None,
-                        last_prompt=None,
-                        running=True,
-                        transcript_path=None,
-                        last_activity=None,
-                        cache_request=None,
-                    )
+                sessions_by_id[session_id] = SessionInfo(
+                    session_id=session_id,
+                    title=None,
+                    cwd=registration.get("cwd"),
+                    entrypoint=registration.get("entrypoint"),
+                    version=registration.get("version"),
+                    model=None,
+                    last_prompt=None,
+                    running=True,
+                    transcript_path=None,
+                    last_activity=None,
+                    cache_request=None,
                 )
+
+        if keep_valid_cache:
+            recent_cutoff = now.timestamp() - max(TTL_SECONDS.values()) - CACHE_SCAN_MARGIN_SECONDS
+            for path in paths:
+                try:
+                    if path.stat().st_mtime < recent_cutoff:
+                        break
+                except OSError:
+                    continue
+                if path.stem in sessions_by_id:
+                    continue
+                info = cache.parse(path)
+                session = session_from_transcript(info, registrations.get(info.session_id))
+                if not include_cli and session.entrypoint != "claude-desktop":
+                    continue
+                if cache_may_still_be_valid(session, now):
+                    sessions_by_id[session.session_id] = session
+
+        sessions = list(sessions_by_id.values())
         sessions.sort(key=lambda item: item.last_activity or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
         return sessions[:limit]
 
@@ -412,6 +432,16 @@ def cache_status(session: SessionInfo, now: datetime) -> str:
     if all(state == "EXPIRED" for state in states):
         return "EXPIRED"
     return "PARTIAL" if len(states) > 1 else "UNCERTAIN"
+
+
+def cache_may_still_be_valid(session: SessionInfo, now: datetime) -> bool:
+    request = session.cache_request
+    if request is None:
+        return False
+    return any(
+        request.started_before + timedelta(seconds=TTL_SECONDS[ttl]) > now
+        for ttl in request.ttls
+    )
 
 
 def format_duration(seconds: float) -> str:
@@ -571,6 +601,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--all", action="store_true", help="include inactive session history")
     parser.add_argument("--include-cli", action="store_true", help="include CLI sessions, not only Desktop")
+    parser.add_argument(
+        "--keep-valid-cache",
+        action="store_true",
+        help="keep inactive sessions while their latest cache may still be valid",
+    )
     parser.add_argument("--limit", type=int, default=20, help="maximum sessions to display (default: 20)")
     parser.add_argument("--json", action="store_true", help="output JSON")
     parser.add_argument(
@@ -602,8 +637,10 @@ def run(argv: list[str] | None = None) -> int:
             claude_dir,
             include_inactive=args.all,
             include_cli=args.include_cli,
+            keep_valid_cache=args.keep_valid_cache,
             limit=args.limit,
             selector=args.session,
+            now=now,
             cache=cache,
         )
         rendered = render_json(sessions, now, compact=args.watch is not None) if args.json else render_table(sessions, now)

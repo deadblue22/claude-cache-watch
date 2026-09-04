@@ -24,7 +24,8 @@ open "dist/Claude Cache Watch.app"
 
 Double-click the App to open the session window. The window provides:
 
-- one clear remaining-time value per running session;
+- one clear remaining-time value per monitored session;
+- inactive Desktop sessions remain visible while their latest cache may still be valid;
 - the latest model, a compact project path, and the latest instruction;
 - responsive session rows and text sizing in a freely resizable window;
 - a compact bottom status bar with active-session count and controls;
@@ -62,6 +63,9 @@ python3 claude_cache_watch.py --json
 
 # Include Claude Code CLI sessions
 python3 claude_cache_watch.py --all --include-cli
+
+# Keep inactive Desktop sessions until their cache is definitely expired
+python3 claude_cache_watch.py --keep-valid-cache
 ```
 
 ## Optional installation
