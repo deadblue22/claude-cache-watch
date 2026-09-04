@@ -4,6 +4,7 @@ import SwiftUI
 struct CachePanel: View {
     @ObservedObject var model: CacheWatchModel
     @AppStorage("pinWindowOnTop") private var isPinned = false
+    @State private var windowWidth: CGFloat = 416
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,7 +21,17 @@ struct CachePanel: View {
             maxHeight: .infinity
         )
         .background(WindowLevelConfigurator(isPinned: isPinned))
+        .background {
+            GeometryReader { geometry in
+                Color.clear.preference(key: WindowWidthPreferenceKey.self, value: geometry.size.width)
+            }
+        }
+        .onPreferenceChange(WindowWidthPreferenceKey.self) { windowWidth = $0 }
         .task { model.start() }
+    }
+
+    private var textScale: CGFloat {
+        min(1.2, max(0.88, windowWidth / 416))
     }
 
     private var statusBar: some View {
@@ -29,7 +40,7 @@ struct CachePanel: View {
                 .fill(headerStatusColor)
                 .frame(width: 5, height: 5)
             Text(summaryText)
-                .font(.system(size: 10.5, weight: .medium))
+                .font(.system(size: 10.5 * textScale, weight: .medium))
                 .foregroundStyle(.secondary)
             Spacer()
             Button {
@@ -85,23 +96,23 @@ struct CachePanel: View {
                     ProgressView()
                         .controlSize(.small)
                     Text("Reading session data from ~/.claude")
-                        .font(.system(size: 12))
+                        .font(.system(size: 12 * textScale))
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error = model.errorMessage, model.snapshot == nil {
-                ErrorState(message: error) {
+                ErrorState(message: error, textScale: textScale) {
                     model.restartMonitor()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if model.sessions.isEmpty {
-                EmptyState()
+                EmptyState(textScale: textScale)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(model.sessions.enumerated()), id: \.element.id) { index, session in
-                            SessionRow(session: session, now: model.now)
+                            SessionRow(session: session, now: model.now, textScale: textScale)
                             if index < model.sessions.count - 1 {
                                 Divider()
                                     .padding(.leading, 14)
@@ -119,6 +130,14 @@ struct CachePanel: View {
         let rowsHeight = CGFloat(model.sessions.count) * 72
         let dividersHeight = CGFloat(max(0, model.sessions.count - 1))
         return min(365, max(72, rowsHeight + dividersHeight))
+    }
+}
+
+private struct WindowWidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 416
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 
@@ -145,6 +164,7 @@ private struct WindowLevelConfigurator: NSViewRepresentable {
 struct SessionRow: View {
     let session: SessionSnapshot
     let now: Date
+    let textScale: CGFloat
     @State private var isHovered = false
 
     private var status: CacheDisplayStatus { session.status(at: now) }
@@ -164,18 +184,18 @@ struct SessionRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(session.displayTitle)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 13 * textScale, weight: .semibold))
                         .lineLimit(1)
                         .layoutPriority(1)
                     Spacer(minLength: 6)
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
                         Text(remainingText)
-                            .font(.system(size: status == .expired ? 14 : 17, weight: .semibold, design: .rounded))
+                            .font(.system(size: (status == .expired ? 14 : 17) * textScale, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(color)
                         if status == .valid {
                             Text("left")
-                                .font(.system(size: 9, weight: .medium))
+                                .font(.system(size: 9 * textScale, weight: .medium))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -183,21 +203,21 @@ struct SessionRow: View {
                 }
                 HStack(spacing: 6) {
                     Text(session.displayModel)
-                        .font(.system(size: 9.5, weight: .semibold))
+                        .font(.system(size: 9.5 * textScale, weight: .semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 1.5)
                         .background(Color.accentColor, in: Capsule())
                         .fixedSize()
                     Text(session.compactProjectPath)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 10 * textScale, design: .monospaced))
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .help(session.cwd ?? "")
                 }
                 Text(session.lastPrompt ?? "No instruction recorded")
-                    .font(.system(size: 10.5))
+                    .font(.system(size: 10.5 * textScale))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -235,15 +255,17 @@ struct SessionRow: View {
 }
 
 struct EmptyState: View {
+    let textScale: CGFloat
+
     var body: some View {
         VStack(spacing: 6) {
             Image(systemName: "rectangle.stack")
                 .font(.system(size: 21, weight: .light))
                 .foregroundStyle(.secondary)
             Text("No active Desktop sessions")
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 12 * textScale, weight: .medium))
             Text("Start or continue a session in Claude Code Desktop and it will appear here.")
-                .font(.system(size: 10.5))
+                .font(.system(size: 10.5 * textScale))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 290)
@@ -253,6 +275,7 @@ struct EmptyState: View {
 
 struct ErrorState: View {
     let message: String
+    let textScale: CGFloat
     let retry: () -> Void
 
     var body: some View {
@@ -261,13 +284,14 @@ struct ErrorState: View {
                 .font(.system(size: 21))
                 .foregroundStyle(Color(nsColor: .systemOrange))
             Text("Unable to Read Sessions")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 12 * textScale, weight: .semibold))
             Text(message)
-                .font(.system(size: 10.5))
+                .font(.system(size: 10.5 * textScale))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 300)
             Button("Retry", action: retry)
+                .font(.system(size: 11 * textScale))
         }
     }
 }
