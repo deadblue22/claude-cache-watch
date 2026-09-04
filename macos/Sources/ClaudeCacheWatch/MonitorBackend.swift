@@ -9,13 +9,13 @@ enum MonitorBackendError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .scriptNotFound:
-            return "找不到随 App 安装的监控脚本。"
+            return "The bundled monitor script could not be found."
         case .pythonNotFound:
-            return "找不到 Python 3。可通过 CLAUDE_CACHE_WATCH_PYTHON 指定路径。"
+            return "Python 3 could not be found. Set CLAUDE_CACHE_WATCH_PYTHON to its path."
         case .launchFailed(let detail):
-            return "无法启动本地监控：\(detail)"
+            return "Unable to start the local monitor: \(detail)"
         case .processFailed(let detail):
-            return "本地监控已停止：\(detail)"
+            return "The local monitor stopped: \(detail)"
         }
     }
 }
@@ -74,7 +74,7 @@ final class MonitorProcess {
                     if !Task.isCancelled && process.terminationStatus != 0 {
                         let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
                         let detail = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
-                        continuation.finish(throwing: MonitorBackendError.processFailed(detail ?? "退出码 \(process.terminationStatus)"))
+                        continuation.finish(throwing: MonitorBackendError.processFailed(detail ?? "exit code \(process.terminationStatus)"))
                     } else {
                         continuation.finish()
                     }

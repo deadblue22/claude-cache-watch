@@ -38,8 +38,8 @@ struct CachePanel: View {
                     )
             }
             .buttonStyle(.plain)
-            .help(isPinned ? "取消窗口置顶" : "窗口置顶")
-            .accessibilityLabel(isPinned ? "取消窗口置顶" : "窗口置顶")
+            .help(isPinned ? "Unpin window" : "Keep window on top")
+            .accessibilityLabel(isPinned ? "Unpin window" : "Keep window on top")
             Button {
                 model.restartMonitor()
             } label: {
@@ -49,18 +49,19 @@ struct CachePanel: View {
                     .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             }
             .buttonStyle(.plain)
-            .help("每 2 秒自动更新；点击立即刷新")
-            .accessibilityLabel("立即刷新")
+            .help("Updates every 2 seconds; click to refresh now")
+            .accessibilityLabel("Refresh now")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
     }
 
     private var summaryText: String {
-        if model.isConnecting { return "正在读取 Session…" }
-        if model.errorMessage != nil { return "读取失败" }
-        if model.sessions.isEmpty { return "没有运行中的 Session" }
-        return "\(model.sessions.count) 个运行中的 Session"
+        if model.isConnecting { return "Loading sessions…" }
+        if model.errorMessage != nil { return "Unable to read sessions" }
+        if model.sessions.isEmpty { return "No active sessions" }
+        let count = model.sessions.count
+        return "\(count) active \(count == 1 ? "session" : "sessions")"
     }
 
     private var headerStatusColor: Color {
@@ -76,7 +77,7 @@ struct CachePanel: View {
                 VStack(spacing: 10) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("读取 ~/.claude 中的 session 记录")
+                    Text("Reading session data from ~/.claude")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                 }
@@ -166,7 +167,7 @@ struct SessionRow: View {
                             .monospacedDigit()
                             .foregroundStyle(color)
                         if status == .valid {
-                            Text("后过期")
+                            Text("left")
                                 .font(.system(size: 9, weight: .medium))
                                 .foregroundStyle(.secondary)
                         }
@@ -188,7 +189,7 @@ struct SessionRow: View {
                         .truncationMode(.middle)
                         .help(session.cwd ?? "")
                 }
-                Text(session.lastPrompt ?? "暂无指令记录")
+                Text(session.lastPrompt ?? "No instruction recorded")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -202,14 +203,14 @@ struct SessionRow: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
-        .help("切换到 Claude Code Desktop")
+        .help("Switch to Claude Code Desktop")
         .contextMenu {
             if let cwd = session.cwd, FileManager.default.fileExists(atPath: cwd) {
-                Button("在 Finder 中打开项目") {
+                Button("Open Project in Finder") {
                     NSWorkspace.shared.open(URL(fileURLWithPath: cwd))
                 }
             }
-            Button("复制 Session ID") {
+            Button("Copy Session ID") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(session.sessionID, forType: .string)
             }
@@ -219,9 +220,9 @@ struct SessionRow: View {
     private var remainingText: String {
         guard let entry = session.primaryCacheEntry,
               let expiry = entry.expiresAtEarliest else {
-            return status == .noData ? "无记录" : "无缓存"
+            return status == .noData ? "No data" : "No cache"
         }
-        if expiry <= now { return status == .uncertain ? "即将过期" : "已过期" }
+        if expiry <= now { return status == .uncertain ? "Expiring" : "Expired" }
         return formatDuration(expiry.timeIntervalSince(now))
     }
 }
@@ -232,9 +233,9 @@ struct EmptyState: View {
             Image(systemName: "rectangle.stack")
                 .font(.system(size: 21, weight: .light))
                 .foregroundStyle(.secondary)
-            Text("没有运行中的 Desktop session")
+            Text("No active Desktop sessions")
                 .font(.system(size: 12, weight: .medium))
-            Text("在 Claude Code Desktop 中开始或继续一个 session 后会自动显示。")
+            Text("Start or continue a session in Claude Code Desktop and it will appear here.")
                 .font(.system(size: 10.5))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -252,14 +253,14 @@ struct ErrorState: View {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 21))
                 .foregroundStyle(Color(nsColor: .systemOrange))
-            Text("无法读取 session")
+            Text("Unable to Read Sessions")
                 .font(.system(size: 12, weight: .semibold))
             Text(message)
                 .font(.system(size: 10.5))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 300)
-            Button("重试", action: retry)
+            Button("Retry", action: retry)
         }
     }
 }

@@ -27,17 +27,17 @@ struct SessionSnapshot: Decodable, Identifiable, Sendable {
 
     var id: String { sessionID }
     var displayTitle: String {
-        guard let title, !title.isEmpty else { return "未命名 session" }
+        guard let title, !title.isEmpty else { return "Untitled session" }
         return title
     }
 
     var projectName: String {
-        guard let cwd, !cwd.isEmpty else { return "路径不可用" }
+        guard let cwd, !cwd.isEmpty else { return "Path unavailable" }
         return URL(fileURLWithPath: cwd).lastPathComponent
     }
 
     var compactProjectPath: String {
-        guard let cwd, !cwd.isEmpty else { return "项目路径不可用" }
+        guard let cwd, !cwd.isEmpty else { return "Project path unavailable" }
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         if cwd == home { return "~" }
         if cwd.hasPrefix(home + "/") {
@@ -47,7 +47,7 @@ struct SessionSnapshot: Decodable, Identifiable, Sendable {
     }
 
     var displayModel: String {
-        guard let model, !model.isEmpty, model != "<synthetic>" else { return "模型未知" }
+        guard let model, !model.isEmpty, model != "<synthetic>" else { return "Unknown model" }
         let normalized = model.lowercased()
         if ["opus", "sonnet", "haiku", "fable"].contains(normalized) {
             return normalized.capitalized
@@ -168,12 +168,12 @@ enum CacheDisplayStatus: String {
 
     var label: String {
         switch self {
-        case .valid: return "有效"
-        case .uncertain: return "判定区间"
-        case .partial: return "部分有效"
-        case .expired: return "已过期"
-        case .noCache: return "无缓存"
-        case .noData: return "无记录"
+        case .valid: return "Valid"
+        case .uncertain: return "Expiry window"
+        case .partial: return "Partially valid"
+        case .expired: return "Expired"
+        case .noCache: return "No cache"
+        case .noData: return "No data"
         }
     }
 }
@@ -186,8 +186,8 @@ enum MonitorScope: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .active: return "运行中"
-        case .recent: return "最近记录"
+        case .active: return "Active"
+        case .recent: return "Recent"
         }
     }
 }
@@ -201,11 +201,11 @@ enum ISODateParser {
 
 func formatRemaining(for entry: CacheEntry, now: Date) -> String {
     guard let earliest = entry.expiresAtEarliest, let latest = entry.expiresAtLatest else {
-        return "不可判定"
+        return "Unavailable"
     }
     let lower = max(0, earliest.timeIntervalSince(now))
     let upper = max(0, latest.timeIntervalSince(now))
-    if upper <= 0 { return "已过期" }
+    if upper <= 0 { return "Expired" }
     if lower <= 0 { return "0–\(formatDuration(upper))" }
     let lowerText = formatDuration(lower)
     let upperText = formatDuration(upper)
@@ -223,18 +223,18 @@ func formatDuration(_ interval: TimeInterval) -> String {
 
 func formatExpiry(for entry: CacheEntry, now: Date) -> String {
     guard let earliest = entry.expiresAtEarliest, let latest = entry.expiresAtLatest else {
-        return "过期时间不可判定"
+        return "Expiry unavailable"
     }
     let formatter = DateFormatter()
     formatter.timeZone = TimeZone(identifier: "Asia/Singapore")
     formatter.dateFormat = "HH:mm:ss"
     if latest <= now {
-        return "已于 \(formatter.string(from: latest)) SGT 过期"
+        return "Expired at \(formatter.string(from: latest)) SGT"
     }
     let first = formatter.string(from: earliest)
     let last = formatter.string(from: latest)
-    if first == last { return "预计 \(first) SGT 过期" }
-    return "预计 \(first)–\(last) SGT 过期"
+    if first == last { return "Expires at \(first) SGT" }
+    return "Expires between \(first) and \(last) SGT"
 }
 
 func formatTokens(_ value: Int) -> String {
