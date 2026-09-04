@@ -74,6 +74,22 @@ class TestClaudeCacheWatch(unittest.TestCase):
             self.assertEqual(result.cache_request.started_after.isoformat(), "2026-09-04T07:00:00+00:00")
             self.assertEqual(result.cache_request.started_before.isoformat(), "2026-09-04T07:00:04+00:00")
 
+    def test_tracks_last_real_model_for_current_session(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "session.jsonl"
+            current = assistant("2026-09-04T07:00:01Z", "request-1", read=100)
+            current["sessionId"] = "session"
+            current["message"]["model"] = "claude-opus-4-6"
+            synthetic = assistant("2026-09-04T07:00:02Z", "request-2", read=100)
+            synthetic["sessionId"] = "session"
+            synthetic["message"]["model"] = "<synthetic>"
+            inherited = assistant("2026-09-04T07:00:03Z", "request-3", read=100)
+            inherited["sessionId"] = "parent-session"
+            inherited["message"]["model"] = "claude-sonnet-4-6"
+            write_jsonl(path, [current, synthetic, inherited])
+
+            self.assertEqual(parse_transcript(path).model, "claude-opus-4-6")
+
     def test_latest_cache_request_refreshes_expiry(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "session.jsonl"

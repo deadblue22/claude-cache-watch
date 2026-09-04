@@ -173,12 +173,21 @@ struct SessionRow: View {
                     }
                     .fixedSize()
                 }
-                Text(session.compactProjectPath)
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .help(session.cwd ?? "")
+                HStack(spacing: 6) {
+                    Text(session.displayModel)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Color.primary.opacity(0.05), in: Capsule())
+                        .fixedSize()
+                    Text(session.compactProjectPath)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .help(session.cwd ?? "")
+                }
                 Text(session.lastPrompt ?? "暂无指令记录")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)

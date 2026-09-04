@@ -25,7 +25,7 @@ open "dist/Claude Cache Watch.app"
 Double-click the App to open the session window. The window provides:
 
 - one clear remaining-time value per running session;
-- a compact project path and the latest instruction on one line;
+- the latest model, a compact project path, and the latest instruction;
 - a persistent window pin button that keeps the monitor above normal windows;
 - click a session row to activate Claude Code Desktop;
 - context menu actions to open the project folder or copy the session ID.

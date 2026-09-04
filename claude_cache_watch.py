@@ -61,6 +61,7 @@ class TranscriptInfo:
     cwd: str | None
     entrypoint: str | None
     version: str | None
+    model: str | None
     last_prompt: str | None
     last_activity: datetime | None
     cache_request: CacheRequest | None
@@ -73,6 +74,7 @@ class SessionInfo:
     cwd: str | None
     entrypoint: str | None
     version: str | None
+    model: str | None
     last_prompt: str | None
     running: bool
     transcript_path: str | None
@@ -130,6 +132,7 @@ def parse_transcript(path: Path) -> TranscriptInfo:
     cwd: str | None = None
     entrypoint: str | None = None
     version: str | None = None
+    model: str | None = None
     last_prompt: str | None = None
     last_activity: datetime | None = None
     previous_event_at: datetime | None = None
@@ -161,6 +164,11 @@ def parse_transcript(path: Path) -> TranscriptInfo:
 
             item_session_id = item.get("sessionId")
             belongs_to_current_session = item_session_id in (None, session_id)
+            if item_type == "assistant" and belongs_to_current_session:
+                assistant_message = item.get("message")
+                assistant_model = assistant_message.get("model") if isinstance(assistant_message, dict) else None
+                if isinstance(assistant_model, str) and assistant_model and assistant_model != "<synthetic>":
+                    model = assistant_model
             if item_type == "last-prompt" and belongs_to_current_session:
                 last_prompt = prompt_preview(item.get("lastPrompt")) or last_prompt
             elif item_type == "user" and belongs_to_current_session and item.get("toolUseResult") is None:
@@ -242,6 +250,7 @@ def parse_transcript(path: Path) -> TranscriptInfo:
         cwd=cwd,
         entrypoint=entrypoint,
         version=version,
+        model=model,
         last_prompt=last_prompt,
         last_activity=last_activity,
         cache_request=cache_request,
@@ -310,6 +319,7 @@ def session_from_transcript(
         cwd=registration.get("cwd") or transcript.cwd,
         entrypoint=registration.get("entrypoint") or transcript.entrypoint,
         version=registration.get("version") or transcript.version,
+        model=transcript.model,
         last_prompt=transcript.last_prompt,
         running=bool(registration.get("_running")),
         transcript_path=str(transcript.path),
@@ -359,6 +369,7 @@ def collect_sessions(
                         cwd=registration.get("cwd"),
                         entrypoint=registration.get("entrypoint"),
                         version=registration.get("version"),
+                        model=None,
                         last_prompt=None,
                         running=True,
                         transcript_path=None,
@@ -446,7 +457,7 @@ def shorten(value: str | None, width: int) -> str:
 def render_table(sessions: Iterable[SessionInfo], now: datetime) -> str:
     items = list(sessions)
     terminal_width = shutil.get_terminal_size((120, 24)).columns
-    title_width = max(16, min(42, terminal_width - 67))
+    title_width = max(16, min(42, terminal_width - 93))
     rows = []
     for session in items:
         request = session.cache_request
@@ -459,12 +470,13 @@ def render_table(sessions: Iterable[SessionInfo], now: datetime) -> str:
                 ttl,
                 remaining_text(request, now),
                 refresh,
+                shorten(session.model, 24),
                 session.session_id[:8],
                 shorten(session.title, title_width),
             )
         )
 
-    headers = ("RUN", "CACHE", "TTL", "REMAINING", "REFRESHED SGT", "SESSION", "TITLE")
+    headers = ("RUN", "CACHE", "TTL", "REMAINING", "REFRESHED SGT", "MODEL", "SESSION", "TITLE")
     widths = [len(header) for header in headers]
     for row in rows:
         for index, value in enumerate(row):
@@ -525,6 +537,7 @@ def render_json(sessions: Iterable[SessionInfo], now: datetime, *, compact: bool
                 "cwd": session.cwd,
                 "entrypoint": session.entrypoint,
                 "claude_code_version": session.version,
+                "model": session.model,
                 "last_prompt": session.last_prompt,
                 "running": session.running,
                 "transcript_path": session.transcript_path,

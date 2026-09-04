@@ -18,6 +18,7 @@ struct SessionSnapshot: Decodable, Identifiable, Sendable {
     let cwd: String?
     let entrypoint: String?
     let claudeCodeVersion: String?
+    let model: String?
     let lastPrompt: String?
     let running: Bool
     let transcriptPath: String?
@@ -45,12 +46,37 @@ struct SessionSnapshot: Decodable, Identifiable, Sendable {
         return cwd
     }
 
+    var displayModel: String {
+        guard let model, !model.isEmpty, model != "<synthetic>" else { return "模型未知" }
+        let normalized = model.lowercased()
+        if ["opus", "sonnet", "haiku", "fable"].contains(normalized) {
+            return normalized.capitalized
+        }
+
+        var parts = normalized.hasPrefix("claude-")
+            ? Array(normalized.dropFirst("claude-".count).split(separator: "-").map(String.init))
+            : normalized.split(separator: "-").map(String.init)
+        if let last = parts.last, last.count == 8, Int(last) != nil {
+            parts.removeLast()
+        }
+        let families = ["opus", "sonnet", "haiku", "fable"]
+        guard let familyIndex = parts.firstIndex(where: { families.contains($0) }) else {
+            return model
+        }
+        let versionParts = familyIndex == 0
+            ? Array(parts.dropFirst())
+            : Array(parts.prefix(upTo: familyIndex))
+        let version = versionParts.filter { Int($0) != nil }.joined(separator: ".")
+        return version.isEmpty ? parts[familyIndex].capitalized : "\(parts[familyIndex].capitalized) \(version)"
+    }
+
     enum CodingKeys: String, CodingKey {
         case sessionID = "session_id"
         case title
         case cwd
         case entrypoint
         case claudeCodeVersion = "claude_code_version"
+        case model
         case lastPrompt = "last_prompt"
         case running
         case transcriptPath = "transcript_path"
