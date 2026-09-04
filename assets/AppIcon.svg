@@ -13,47 +13,49 @@
     </filter>
   </defs>
 
-  <rect x="22" y="22" width="980" height="980" rx="228" fill="#090a0c"/>
+  <g transform="translate(71.68 71.68) scale(0.86)">
+    <rect x="22" y="22" width="980" height="980" rx="228" fill="#090a0c"/>
 
-  <g filter="url(#shadow)">
-    <rect x="92" y="142" width="650" height="190" rx="58" fill="url(#row)"/>
-    <rect x="92" y="417" width="650" height="190" rx="58" fill="url(#row)"/>
-    <rect x="92" y="692" width="650" height="190" rx="58" fill="url(#row)"/>
+    <g filter="url(#shadow)">
+      <rect x="92" y="142" width="650" height="190" rx="58" fill="url(#row)"/>
+      <rect x="92" y="417" width="650" height="190" rx="58" fill="url(#row)"/>
+      <rect x="92" y="692" width="650" height="190" rx="58" fill="url(#row)"/>
+    </g>
+
+    <g fill="#202226">
+      <rect x="126" y="170" width="142" height="134" rx="42"/>
+      <rect x="126" y="445" width="142" height="134" rx="42"/>
+      <rect x="126" y="720" width="142" height="134" rx="42"/>
+    </g>
+
+    <g fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M195 205l-34 32 34 32M226 205l34 32-34 32"/>
+      <path d="M195 480l-34 32 34 32M226 480l34 32-34 32"/>
+      <path d="M195 755l-34 32 34 32M226 755l34 32-34 32"/>
+    </g>
+
+    <g fill="#b6bac0">
+      <rect x="312" y="184" width="264" height="34" rx="17"/>
+      <rect x="312" y="244" width="174" height="34" rx="17"/>
+      <rect x="312" y="459" width="182" height="34" rx="17"/>
+      <rect x="312" y="519" width="146" height="34" rx="17"/>
+      <rect x="312" y="734" width="172" height="34" rx="17"/>
+      <rect x="312" y="794" width="148" height="34" rx="17"/>
+    </g>
+
+    <circle cx="663" cy="211" r="27" fill="#087df0"/>
+    <circle cx="534" cy="476" r="18" fill="#9ca3aa"/>
+    <circle cx="522" cy="751" r="18" fill="#9ca3aa"/>
+
+    <g filter="url(#shadow)">
+      <circle cx="712" cy="642" r="222" fill="#18251d" fill-opacity="0.94"/>
+      <circle cx="712" cy="642" r="222" fill="none" stroke="url(#green)" stroke-width="72" stroke-linecap="round" stroke-dasharray="1165 230" transform="rotate(-62 712 642)"/>
+    </g>
+
+    <g fill="none" stroke="#ffffff" stroke-width="34" stroke-linecap="round">
+      <path d="M712 642V518"/>
+      <path d="M712 642l100 67"/>
+    </g>
+    <circle cx="712" cy="642" r="38" fill="url(#green)"/>
   </g>
-
-  <g fill="#202226">
-    <rect x="126" y="170" width="142" height="134" rx="42"/>
-    <rect x="126" y="445" width="142" height="134" rx="42"/>
-    <rect x="126" y="720" width="142" height="134" rx="42"/>
-  </g>
-
-  <g fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M195 205l-34 32 34 32M226 205l34 32-34 32"/>
-    <path d="M195 480l-34 32 34 32M226 480l34 32-34 32"/>
-    <path d="M195 755l-34 32 34 32M226 755l34 32-34 32"/>
-  </g>
-
-  <g fill="#b6bac0">
-    <rect x="312" y="184" width="264" height="34" rx="17"/>
-    <rect x="312" y="244" width="174" height="34" rx="17"/>
-    <rect x="312" y="459" width="182" height="34" rx="17"/>
-    <rect x="312" y="519" width="146" height="34" rx="17"/>
-    <rect x="312" y="734" width="172" height="34" rx="17"/>
-    <rect x="312" y="794" width="148" height="34" rx="17"/>
-  </g>
-
-  <circle cx="663" cy="211" r="27" fill="#087df0"/>
-  <circle cx="534" cy="476" r="18" fill="#9ca3aa"/>
-  <circle cx="522" cy="751" r="18" fill="#9ca3aa"/>
-
-  <g filter="url(#shadow)">
-    <circle cx="712" cy="642" r="222" fill="#18251d" fill-opacity="0.94"/>
-    <circle cx="712" cy="642" r="222" fill="none" stroke="url(#green)" stroke-width="72" stroke-linecap="round" stroke-dasharray="1165 230" transform="rotate(-62 712 642)"/>
-  </g>
-
-  <g fill="none" stroke="#ffffff" stroke-width="34" stroke-linecap="round">
-    <path d="M712 642V518"/>
-    <path d="M712 642l100 67"/>
-  </g>
-  <circle cx="712" cy="642" r="38" fill="url(#green)"/>
 </svg>
