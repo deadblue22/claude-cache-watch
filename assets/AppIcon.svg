@@ -13,6 +13,8 @@
     </filter>
   </defs>
 
+  <rect x="22" y="22" width="980" height="980" rx="228" fill="#090a0c"/>
+
   <g filter="url(#shadow)">
     <rect x="92" y="142" width="650" height="190" rx="58" fill="url(#row)"/>
     <rect x="92" y="417" width="650" height="190" rx="58" fill="url(#row)"/>
