@@ -23,15 +23,10 @@ struct CachePanel: View {
         .background(
             WindowConfigurator(
                 isPinned: isPinned,
-                preferredContentHeight: preferredContentHeight + 31
+                preferredContentHeight: preferredContentHeight + 31,
+                windowSize: $windowSize
             )
         )
-        .background {
-            GeometryReader { geometry in
-                Color.clear.preference(key: WindowSizePreferenceKey.self, value: geometry.size)
-            }
-        }
-        .onPreferenceChange(WindowSizePreferenceKey.self) { windowSize = $0 }
         .task { model.start() }
     }
 
@@ -142,24 +137,58 @@ struct CachePanel: View {
     }
 }
 
-private struct WindowSizePreferenceKey: PreferenceKey {
-    static var defaultValue = CGSize(width: 416, height: 103)
-
-    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
-        value = nextValue()
-    }
-}
-
 private struct WindowConfigurator: NSViewRepresentable {
     let isPinned: Bool
     let preferredContentHeight: CGFloat
+    @Binding var windowSize: CGSize
 
     final class Coordinator {
         var lastPreferredContentHeight: CGFloat?
+        var windowSize: Binding<CGSize>
+        weak var observedWindow: NSWindow?
+        var resizeObserver: NSObjectProtocol?
+
+        init(windowSize: Binding<CGSize>) {
+            self.windowSize = windowSize
+        }
+
+        func observe(_ window: NSWindow) {
+            guard observedWindow !== window else {
+                updateSize(from: window)
+                return
+            }
+            if let resizeObserver {
+                NotificationCenter.default.removeObserver(resizeObserver)
+            }
+            observedWindow = window
+            updateSize(from: window)
+            resizeObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.didResizeNotification,
+                object: window,
+                queue: .main
+            ) { [weak self, weak window] _ in
+                guard let self, let window else { return }
+                self.updateSize(from: window)
+            }
+        }
+
+        func updateSize(from window: NSWindow) {
+            let size = window.contentLayoutRect.size
+            if abs(windowSize.wrappedValue.width - size.width) >= 0.5 ||
+                abs(windowSize.wrappedValue.height - size.height) >= 0.5 {
+                windowSize.wrappedValue = size
+            }
+        }
+
+        deinit {
+            if let resizeObserver {
+                NotificationCenter.default.removeObserver(resizeObserver)
+            }
+        }
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator()
+        Coordinator(windowSize: $windowSize)
     }
 
     func makeNSView(context: Context) -> NSView {
@@ -169,6 +198,7 @@ private struct WindowConfigurator: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
+        context.coordinator.windowSize = $windowSize
         apply(to: nsView, coordinator: context.coordinator)
     }
 
@@ -176,6 +206,7 @@ private struct WindowConfigurator: NSViewRepresentable {
         DispatchQueue.main.async {
             guard let window = view.window else { return }
             window.level = isPinned ? .floating : .normal
+            coordinator.observe(window)
 
             if let lastHeight = coordinator.lastPreferredContentHeight,
                abs(lastHeight - preferredContentHeight) < 0.5 {
@@ -197,6 +228,7 @@ private struct WindowConfigurator: NSViewRepresentable {
                     display: true,
                     animate: coordinator.lastPreferredContentHeight != nil
                 )
+                coordinator.updateSize(from: window)
             }
             coordinator.lastPreferredContentHeight = preferredContentHeight
         }
