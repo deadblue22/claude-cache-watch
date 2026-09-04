@@ -13,10 +13,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
-from zoneinfo import ZoneInfo
 
 
-SGT = ZoneInfo("Asia/Singapore")
 TTL_SECONDS = {"5m": 5 * 60, "1h": 60 * 60}
 CACHE_SCAN_MARGIN_SECONDS = 5 * 60
 
@@ -34,8 +32,13 @@ def parse_timestamp(value: Any) -> datetime | None:
         return None
 
 
-def iso_sgt(value: datetime | None) -> str | None:
-    return value.astimezone(SGT).isoformat(timespec="seconds") if value else None
+def iso_local(value: datetime | None) -> str | None:
+    return value.astimezone().isoformat(timespec="seconds") if value else None
+
+
+def local_timezone_name(value: datetime) -> str:
+    local = value.astimezone()
+    return local.tzname() or str(local.tzinfo) or "local"
 
 
 def positive_int(value: Any) -> int:
@@ -492,7 +495,7 @@ def render_table(sessions: Iterable[SessionInfo], now: datetime) -> str:
     for session in items:
         request = session.cache_request
         ttl = "+".join(request.ttls) if request else "-"
-        refresh = request.started_after.astimezone(SGT).strftime("%m-%d %H:%M:%S") if request else "-"
+        refresh = request.started_after.astimezone().strftime("%m-%d %H:%M:%S") if request else "-"
         rows.append(
             (
                 "yes" if session.running else "no",
@@ -506,7 +509,7 @@ def render_table(sessions: Iterable[SessionInfo], now: datetime) -> str:
             )
         )
 
-    headers = ("RUN", "CACHE", "TTL", "REMAINING", "REFRESHED SGT", "MODEL", "SESSION", "TITLE")
+    headers = ("RUN", "CACHE", "TTL", "REMAINING", "REFRESHED", "MODEL", "SESSION", "TITLE")
     widths = [len(header) for header in headers]
     for row in rows:
         for index, value in enumerate(row):
@@ -515,7 +518,8 @@ def render_table(sessions: Iterable[SessionInfo], now: datetime) -> str:
     def line(values: Iterable[str]) -> str:
         return "  ".join(value.ljust(widths[index]) for index, value in enumerate(values)).rstrip()
 
-    output = [f"Claude prompt cache  {now.astimezone(SGT).strftime('%Y-%m-%d %H:%M:%S SGT')}"]
+    local_now = now.astimezone()
+    output = [f"Claude prompt cache  {local_now.strftime('%Y-%m-%d %H:%M:%S')} {local_timezone_name(now)}"]
     if not rows:
         output.append("No matching running Claude Code Desktop sessions.")
         return "\n".join(output)
@@ -538,15 +542,15 @@ def ttl_json(request: CacheRequest | None, now: datetime) -> dict[str, Any] | No
                 "ttl": ttl,
                 "remaining_seconds_lower": max(0, int((earliest - now).total_seconds())),
                 "remaining_seconds_upper": max(0, int((latest - now).total_seconds())),
-                "expires_at_earliest_sgt": iso_sgt(earliest),
-                "expires_at_latest_sgt": iso_sgt(latest),
+                "expires_at_earliest": iso_local(earliest),
+                "expires_at_latest": iso_local(latest),
             }
         )
     return {
         "status": None,
         "request_id": request.request_id,
-        "request_started_after_sgt": iso_sgt(request.started_after),
-        "request_started_before_sgt": iso_sgt(request.started_before),
+        "request_started_after": iso_local(request.started_after),
+        "request_started_before": iso_local(request.started_before),
         "ttl_source": request.ttl_source,
         "cache_read_input_tokens": request.read_tokens,
         "cache_creation_input_tokens": request.write_tokens,
@@ -571,14 +575,14 @@ def render_json(sessions: Iterable[SessionInfo], now: datetime, *, compact: bool
                 "last_prompt": session.last_prompt,
                 "running": session.running,
                 "transcript_path": session.transcript_path,
-                "last_activity_sgt": iso_sgt(session.last_activity),
+                "last_activity": iso_local(session.last_activity),
                 "cache": cache,
             }
         )
     return json.dumps(
         {
-            "generated_at_sgt": iso_sgt(now),
-            "timezone": "Asia/Singapore",
+            "generated_at": iso_local(now),
+            "timezone": local_timezone_name(now),
             "sessions": payload,
         },
         ensure_ascii=False,

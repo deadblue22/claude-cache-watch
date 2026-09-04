@@ -1,15 +1,7 @@
 import Foundation
 
 struct CacheSnapshot: Decodable, Sendable {
-    let generatedAtSGT: String
-    let timezone: String
     let sessions: [SessionSnapshot]
-
-    enum CodingKeys: String, CodingKey {
-        case generatedAtSGT = "generated_at_sgt"
-        case timezone
-        case sessions
-    }
 }
 
 struct SessionSnapshot: Decodable, Identifiable, Sendable {
@@ -22,7 +14,6 @@ struct SessionSnapshot: Decodable, Identifiable, Sendable {
     let lastPrompt: String?
     let running: Bool
     let transcriptPath: String?
-    let lastActivitySGT: String?
     let cache: CacheInfo?
 
     var id: String { sessionID }
@@ -80,7 +71,6 @@ struct SessionSnapshot: Decodable, Identifiable, Sendable {
         case lastPrompt = "last_prompt"
         case running
         case transcriptPath = "transcript_path"
-        case lastActivitySGT = "last_activity_sgt"
         case cache
     }
 
@@ -113,8 +103,6 @@ struct SessionSnapshot: Decodable, Identifiable, Sendable {
 struct CacheInfo: Decodable, Sendable {
     let status: String?
     let requestID: String
-    let requestStartedAfterSGT: String
-    let requestStartedBeforeSGT: String
     let ttlSource: String
     let cacheReadInputTokens: Int
     let cacheCreationInputTokens: Int
@@ -123,8 +111,6 @@ struct CacheInfo: Decodable, Sendable {
     enum CodingKeys: String, CodingKey {
         case status
         case requestID = "request_id"
-        case requestStartedAfterSGT = "request_started_after_sgt"
-        case requestStartedBeforeSGT = "request_started_before_sgt"
         case ttlSource = "ttl_source"
         case cacheReadInputTokens = "cache_read_input_tokens"
         case cacheCreationInputTokens = "cache_creation_input_tokens"
@@ -136,8 +122,8 @@ struct CacheEntry: Decodable, Sendable {
     let ttl: String
     let remainingSecondsLower: Int
     let remainingSecondsUpper: Int
-    let expiresAtEarliestSGT: String
-    let expiresAtLatestSGT: String
+    let expiresAtEarliestISO: String
+    let expiresAtLatestISO: String
 
     var ttlSeconds: TimeInterval {
         switch ttl {
@@ -146,15 +132,15 @@ struct CacheEntry: Decodable, Sendable {
         }
     }
 
-    var expiresAtEarliest: Date? { ISODateParser.parse(expiresAtEarliestSGT) }
-    var expiresAtLatest: Date? { ISODateParser.parse(expiresAtLatestSGT) }
+    var expiresAtEarliest: Date? { ISODateParser.parse(expiresAtEarliestISO) }
+    var expiresAtLatest: Date? { ISODateParser.parse(expiresAtLatestISO) }
 
     enum CodingKeys: String, CodingKey {
         case ttl
         case remainingSecondsLower = "remaining_seconds_lower"
         case remainingSecondsUpper = "remaining_seconds_upper"
-        case expiresAtEarliestSGT = "expires_at_earliest_sgt"
-        case expiresAtLatestSGT = "expires_at_latest_sgt"
+        case expiresAtEarliestISO = "expires_at_earliest"
+        case expiresAtLatestISO = "expires_at_latest"
     }
 }
 
@@ -226,15 +212,15 @@ func formatExpiry(for entry: CacheEntry, now: Date) -> String {
         return "Expiry unavailable"
     }
     let formatter = DateFormatter()
-    formatter.timeZone = TimeZone(identifier: "Asia/Singapore")
-    formatter.dateFormat = "HH:mm:ss"
+    formatter.timeZone = .autoupdatingCurrent
+    formatter.dateFormat = "HH:mm:ss z"
     if latest <= now {
-        return "Expired at \(formatter.string(from: latest)) SGT"
+        return "Expired at \(formatter.string(from: latest))"
     }
     let first = formatter.string(from: earliest)
     let last = formatter.string(from: latest)
-    if first == last { return "Expires at \(first) SGT" }
-    return "Expires between \(first) and \(last) SGT"
+    if first == last { return "Expires at \(first)" }
+    return "Expires between \(first) and \(last)"
 }
 
 func formatTokens(_ value: Int) -> String {

@@ -6,8 +6,6 @@ A macOS App and local CLI that estimate the remaining prompt-cache TTL for Claud
 
 Claude's prompt cache is server-side. The local JSONL records include cache read/write token counts, the cache TTL used (`5m` or `1h`), and event timestamps, but not a server-confirmed expiry timestamp. The CLI therefore reports a narrow estimate bounded by the local event immediately before the request and the first assistant event for that request.
 
-All displayed timestamps use SGT (Singapore time).
-
 ## Requirements
 
 - macOS 14 or later

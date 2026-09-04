@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+import time
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,6 +12,8 @@ from claude_cache_watch import (
     collect_sessions,
     parse_transcript,
     remaining_text,
+    render_json,
+    render_table,
     session_from_transcript,
 )
 
@@ -207,6 +210,38 @@ class TestClaudeCacheWatch(unittest.TestCase):
             self.assertEqual(running_only, [])
             self.assertEqual([session.session_id for session in visible], ["cached-session"])
             self.assertEqual(expired, [])
+
+    def test_time_output_uses_the_system_timezone(self) -> None:
+        previous_timezone = os.environ.get("TZ")
+        os.environ["TZ"] = "Asia/Tokyo"
+        time.tzset()
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                path = Path(temp_dir) / "session.jsonl"
+                write_jsonl(
+                    path,
+                    [
+                        {"type": "user", "timestamp": "2026-09-04T07:00:00Z"},
+                        assistant("2026-09-04T07:00:01Z", "request-1", read=100, five_minute=20),
+                    ],
+                )
+                session = session_from_transcript(parse_transcript(path), None)
+                now = datetime(2026, 9, 4, 7, 2, 0, tzinfo=timezone.utc)
+
+                json_output = render_json([session], now)
+                payload = json.loads(json_output)
+
+                self.assertEqual(payload["timezone"], "JST")
+                self.assertEqual(payload["generated_at"], "2026-09-04T16:02:00+09:00")
+                self.assertNotIn("_sgt", json_output)
+                self.assertIn("2026-09-04 16:02:00 JST", render_table([session], now))
+                self.assertNotIn("SGT", render_table([session], now))
+        finally:
+            if previous_timezone is None:
+                os.environ.pop("TZ", None)
+            else:
+                os.environ["TZ"] = previous_timezone
+            time.tzset()
 
 
 if __name__ == "__main__":
